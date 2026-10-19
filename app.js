@@ -23,7 +23,7 @@ const LEVELS  = ['Лёгкий','Нормальный','Сложный','Спё�
 const LVL_C   = ['#34d399','#38bdf8','#c084fc','#fbbf24'];
 const LVL_BG  = ['rgba(52,211,153,.3)','rgba(56,189,248,.3)','rgba(168,85,247,.34)','rgba(245,158,11,.34)'];
 const COLORS  = ['#a855f7','#ec4899','#38bdf8','#f59e0b','#34d399','#fb7185','#818cf8','#facc15'];
-const TITLES  = {classic:'Классика', topics:'По темам', bvg:'Boys vs Girls', draw:'Рисунок', whose:'Чья фраза'};
+const TITLES  = {classic:'Классика', topics:'По темам', bvg:'Boys vs Girls', draw:'Рисунок', whose:'Чья фраза', either:'Или / Или'};
 
 const TEAM_NAMES = [
   'Облупленные','Отстреляные','Команда имени Марка Америки','Команда имени Валеры Барнюка',
@@ -40,9 +40,10 @@ const PRESETS = {
   bvg    :{time:60, goal:30, count:0, penalty:true},
   draw   :{time:120,goal:10, count:3, penalty:false},
   whose  :{time:90, goal:12, count:5, penalty:false},
+  either :{},
 };
 const DEFAULTS = {
-  mode:'classic', teams:[], levels:[0,1], themes:[],
+  mode:'classic', teams:[], levels:[0,1], themes:[], ecats:[],
   time:60, goal:30, count:0,
   penalty:true, last:true, sound:true, vibro:true, opts:false, swap:false, hints:false,
 };
@@ -231,12 +232,20 @@ function openSetup(mode){
   if(mode==='classic') S.themes = ['general'];
   if(mode==='topics')  S.themes = [];
 
+  const E = window.ALIAS_EITHER;
+  if(mode==='either' && E && !S.ecats.length) S.ecats = E.cats.map(c=>c.id);
+
   $('#setup-title').textContent = TITLES[mode];
   const words = mode==='classic' || mode==='topics' || mode==='bvg';
+  const either = mode==='either';
+  $('#box-teams').hidden   = either;
   $('#box-levels').hidden  = !words;
   $('#box-themes').hidden  = mode!=='topics';
-  $('#f-count').hidden     = words;
-  $('#sw-penalty').hidden  = mode==='whose';
+  $('#box-ecats').hidden   = !either;
+  $('#f-time').hidden      = either;
+  $('#f-goal').hidden      = either;
+  $('#f-count').hidden     = words || either;
+  $('#sw-penalty').hidden  = mode==='whose' || either;
   $('#sw-last').hidden     = !words;
   $('#sw-hints').hidden    = !words;
   $('#sw-opts').hidden     = mode!=='whose';
@@ -249,9 +258,11 @@ function openSetup(mode){
     w.push('Фото не подгрузились. Запусти через <b>start.bat</b>.');
   if(mode==='whose' && !((window.ALIAS_PHRASES||{}).items||[]).length)
     w.push('Нет файла <b>data/phrases.js</b>.');
+  if(either && !E)
+    w.push('Нет файла <b>data/either.js</b>.');
   $('#setup-warn').innerHTML = w.map(t=>`<div class="err">${t}</div>`).join('');
 
-  renderTeams(); renderLevels(); renderThemes(); renderRules();
+  renderTeams(); renderLevels(); renderThemes(); renderEcats(); renderRules();
   show('setup');
 }
 
@@ -315,11 +326,29 @@ function renderThemes(){
   });
   checkStart();
 }
+function renderEcats(){
+  const box = $('#ecats'), E = window.ALIAS_EITHER;
+  box.innerHTML = '';
+  if(!E) return;
+  E.cats.forEach((t,ci)=>{
+    const c = E.items.filter(it=>it[0]===ci).length;
+    const d = document.createElement('div');
+    d.className = 'theme'+(S.ecats.includes(t.id)?' sel':'');
+    d.innerHTML = `<span class="n">${t.n}</span><span class="c">${num(c)} ${plural(c,'вопрос','вопроса','вопросов')}</span>`;
+    d.addEventListener('click', ()=>{
+      const k = S.ecats.indexOf(t.id);
+      if(k>=0) S.ecats.splice(k,1); else S.ecats.push(t.id);
+      save(); buzz(8); renderEcats(); checkStart();
+    });
+    box.appendChild(d);
+  });
+}
 function checkStart(){
   const btn = $('#start');
   const bad = S.mode==='topics' && !S.themes.length;
-  btn.disabled = bad;
-  btn.textContent = bad ? 'Выбери хотя бы одну тему' : 'Поехали';
+  const ebad = S.mode==='either' && (!window.ALIAS_EITHER || !S.ecats.length);
+  btn.disabled = bad || ebad;
+  btn.textContent = bad ? 'Выбери хотя бы одну тему' : ebad ? 'Выбери хотя бы одну категорию' : 'Поехали';
 }
 function bindRange(id, key, out, fmt){
   const r = $(id);
@@ -342,6 +371,7 @@ function renderRules(){
 
 /* ---------- старт ---------- */
 $('#start').addEventListener('click', ()=>{
+  if(S.mode === 'either'){ save(); startEither(); return; }
   S.teams = S.teams.map(t=>({n:(t.n||'').trim()})).filter(t=>t.n);
   if(S.teams.length < 2) S.teams = randomNames(2);
   save();
@@ -591,6 +621,13 @@ document.addEventListener('keydown', e=>{
   if(e.target.tagName === 'INPUT') return;
   if(e.code === 'Escape'){ const m = $('.modal'); if(m){ m.remove(); return; } }
   if($('#s-ready').classList.contains('on') && (e.code==='Space'||e.code==='Enter')){ e.preventDefault(); startRound(); return; }
+  if($('#s-either').classList.contains('on')){
+    if(e.code==='ArrowLeft'||e.code==='Digit1'){ e.preventDefault(); ePick(0); }
+    if(e.code==='ArrowRight'||e.code==='Digit2'){ e.preventDefault(); ePick(1); }
+    if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); eStep(1); }
+    if(e.code==='Backspace'){ e.preventDefault(); eStep(-1); }
+    return;
+  }
   if(!$('#s-play').classList.contains('on')) return;
   if(e.code==='ArrowRight'||e.code==='Space'||e.code==='Enter'){ e.preventDefault(); if(running||lastCall) resolve(true); }
   if(e.code==='ArrowLeft'||e.code==='Backspace'){ e.preventDefault(); if(running||lastCall) resolve(false); }
@@ -637,6 +674,76 @@ $('#rv-next').addEventListener('click', ()=>{
   if(turn === 0) round++;
   done ? renderBoard(true) : goReady();
 });
+
+/* =====================================================
+   ИЛИ / ИЛИ
+   без команд и таймера: выбираешь вариант, споришь, листаешь дальше
+   ===================================================== */
+let eDeck = [], ePos = 0, ePicks = [];
+
+function startEither(){
+  const E = window.ALIAS_EITHER;
+  const on = new Set(S.ecats.map(id=>E.cats.findIndex(c=>c.id===id)));
+  eDeck = shuffle(E.items.filter(it=>on.has(it[0])).slice());
+  ePos = 0; ePicks = [];
+  renderEither();
+  show('either');
+}
+function renderEither(){
+  const E = window.ALIAS_EITHER, st = $('#e-stage');
+  $('#e-prev').disabled = ePos === 0;
+  if(ePos >= eDeck.length){
+    $('#e-count').textContent = '';
+    $('#e-next').textContent = 'Перемешать заново';
+    st.innerHTML = `<div class="eend"><div class="kicker">всё</div>`+
+      `<div class="w">Вопросы кончились</div></div>`;
+    return;
+  }
+  const it = eDeck[ePos], pick = ePicks[ePos];
+  $('#e-count').textContent = (ePos+1)+' / '+eDeck.length;
+  $('#e-next').textContent = 'Дальше';
+  st.innerHTML =
+    `<div class="either">`+
+      `<div class="ehead"><span class="kicker">${esc(E.cats[it[0]].n)}</span>`+
+        (it[3] ? `<div class="ectx">${esc(it[3])}</div>` : '')+`</div>`+
+      `<button class="eo a" type="button"><span>${esc(it[1])}</span></button>`+
+      `<div class="eor">или</div>`+
+      `<button class="eo b" type="button"><span>${esc(it[2])}</span></button>`+
+      `<div class="etwist"></div>`+
+    `</div>`;
+  $$('#e-stage .eo').forEach((b,i)=>b.addEventListener('click', ()=>ePick(i)));
+  if(pick != null) paintPick(pick, true);
+}
+function paintPick(i, quiet){
+  const E = window.ALIAS_EITHER;
+  $$('#e-stage .eo').forEach((b,k)=>{
+    b.classList.toggle('picked', k===i);
+    b.classList.toggle('dim', k!==i);
+  });
+  const tw = $('#e-stage .etwist');
+  if(!tw) return;
+  /* подводка к спору привязана к вопросу, чтобы не прыгала при возврате */
+  tw.textContent = E.twists[(ePos*7 + eDeck.length) % E.twists.length];
+  if(quiet) tw.classList.add('show');
+  else requestAnimationFrame(()=>tw.classList.add('show'));
+}
+function ePick(i){
+  if(ePos >= eDeck.length) return;
+  if(ePicks[ePos] === i) return;
+  ePicks[ePos] = i;
+  paintPick(i);
+  soon(sndFlip); buzz(10);
+}
+function eStep(d){
+  if(d > 0 && ePos >= eDeck.length){ startEither(); return; }
+  const n = ePos + d;
+  if(n < 0) return;
+  ePos = n;
+  renderEither();
+  if(d > 0) buzz(8);
+}
+$('#e-next').addEventListener('click', ()=>eStep(1));
+$('#e-prev').addEventListener('click', ()=>eStep(-1));
 
 /* ---------- справка по слову ---------- */
 const WIKI = {};
