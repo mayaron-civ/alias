@@ -56,7 +56,7 @@ body::before{
 /* при системном «меньше анимации» убираем крупные движения, но оставляем мелкие переходы */
 @media (prefers-reduced-motion:reduce){
   body::before{animation:none}
-  .screen,#stage>*,.ritem,.brow,.tally,.winner,.ready .who,.sheet,.modal,
+  .screen,#stage>*,#e-stage>*,.ritem,.brow,.tally,.winner,.ready .who,.sheet,.modal,
   .wordcard .w,.wordcard .tag{animation-duration:.01ms!important;animation-delay:0ms!important}
 }
 
@@ -381,6 +381,56 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-ra
   .ring{width:64px;height:64px;font-size:24px;margin-bottom:12px}
   .hint{margin-top:6px}
 }
+/* ============ ИЛИ / ИЛИ ============ */
+#s-either.on{display:flex;flex-direction:column;
+  min-height:calc(100vh - 36px - var(--safe-b));min-height:calc(100dvh - 36px - var(--safe-b))}
+.ecount{font-family:var(--h);font-size:13px;font-weight:700;color:var(--muted2);flex:none;padding-right:4px}
+#e-stage{flex:1;display:flex;min-height:0}
+#e-stage>*{flex:1;min-width:0;animation:cardIn .42s var(--e2)}
+.either{display:flex;flex-direction:column;gap:10px}
+.ehead{text-align:center;flex:none}
+.ehead .kicker{display:block}
+.ectx{margin-top:9px;font-size:15px;line-height:1.4;font-weight:600;color:var(--muted)}
+.eo{flex:1;position:relative;overflow:hidden;cursor:pointer;min-height:118px;
+  display:grid;place-items:center;text-align:center;padding:22px 20px;border-radius:24px;
+  border:1px solid var(--stroke2);color:var(--text);
+  background:linear-gradient(155deg,rgba(255,255,255,.09),rgba(255,255,255,.03));
+  box-shadow:0 14px 40px rgba(0,0,0,.42);
+  font-family:var(--h);font-weight:800;font-size:clamp(18px,5vw,29px);line-height:1.24;letter-spacing:-.02em;
+  overflow-wrap:break-word;hyphens:auto;
+  transition:transform .3s var(--e2),opacity .3s,border-color .3s,box-shadow .3s}
+.eo::before{content:"";position:absolute;inset:0;opacity:.5;pointer-events:none;transition:opacity .3s;
+  background:radial-gradient(85% 75% at 50% 0%,var(--ec),transparent 72%)}
+.eo span{position:relative}
+.eo.a{--ec:rgba(168,85,247,.45);--eb:#c084fc}
+.eo.b{--ec:rgba(56,189,248,.38);--eb:#38bdf8}
+.eo:active{transform:scale(.975)}
+.eo:hover{border-color:var(--eb)}
+.eo.picked{border-color:var(--eb);box-shadow:0 0 0 2px var(--eb),0 18px 50px rgba(0,0,0,.5)}
+.eo.picked::before{opacity:1}
+.eo.dim{opacity:.36;transform:scale(.97)}
+.eor{position:relative;z-index:2;align-self:center;flex:none;margin:-23px 0;
+  font-family:var(--h);font-weight:900;font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+  color:#150526;background:linear-gradient(100deg,var(--a3),var(--a2) 50%,var(--a1));
+  border-radius:999px;padding:9px 16px 9px 19px;box-shadow:0 0 0 5px var(--bg)}
+.etwist{flex:none;text-align:center;font-size:14px;font-weight:600;color:var(--muted);min-height:20px;
+  opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s var(--e)}
+.etwist.show{opacity:1;transform:none}
+.eend{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;text-align:center}
+.eend .w{font-family:var(--h);font-size:clamp(24px,7vw,40px);font-weight:900}
+.enav{display:grid;grid-template-columns:1fr 1.6fr;gap:9px;margin-top:12px;flex:none}
+@media (min-width:760px){
+  #s-either.on{min-height:calc(100vh - 60px);min-height:calc(100dvh - 60px)}
+  #e-stage{max-height:66vh}
+}
+@media (max-height:520px) and (orientation:landscape){
+  #s-either.on{min-height:calc(100vh - 18px - var(--safe-b));min-height:calc(100dvh - 18px - var(--safe-b))}
+  .either{gap:6px}
+  .ectx{margin-top:4px;font-size:13px}
+  .eo{min-height:0;padding:12px 16px;font-size:clamp(15px,3vw,22px)}
+  .eor{margin:-17px 0;padding:6px 13px 6px 16px}
+  .etwist{display:none}
+}
 </style>
 </head>
 <body>
@@ -399,6 +449,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-ra
     <!-- режим временно выключен: убрать hidden, чтобы вернуть -->
     <button class="mode" data-mode="draw" hidden style="--c1:#f59e0b;--c2:#ec4899"><b>Рисунок</b><span class="arr">›</span></button>
     <button class="mode" data-mode="whose"   style="--c1:#34d399;--c2:#38bdf8"><b>Чья фраза</b><span class="arr">›</span></button>
+    <button class="mode" data-mode="either"  style="--c1:#f59e0b;--c2:#a855f7"><b>Или / Или</b><span class="arr">›</span></button>
   </div>
 </section>
 
@@ -407,7 +458,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-ra
   <div class="top"><button class="iconbtn" data-go="home">←</button><h2 id="setup-title"></h2></div>
   <div id="setup-warn"></div>
 
-  <div class="card"><h3>Команды</h3>
+  <div class="card" id="box-teams"><h3>Команды</h3>
     <div id="teams"></div>
     <div class="row">
       <button class="btn ghost" id="reroll-teams">Перемешать</button>
@@ -419,10 +470,12 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-ra
 
   <div class="card" id="box-themes"><h3>Темы</h3><div class="themegrid" id="themes"></div></div>
 
+  <div class="card" id="box-ecats"><h3>Категории</h3><div class="themegrid" id="ecats"></div></div>
+
   <div class="card"><h3>Правила</h3>
-    <div class="field"><label>Время на ход <b><span id="v-time"></span> с</b></label>
+    <div class="field" id="f-time"><label>Время на ход <b><span id="v-time"></span> с</b></label>
       <input type="range" id="r-time" min="20" max="180" step="5"></div>
-    <div class="field"><label>Играем до <b><span id="v-goal"></span></b></label>
+    <div class="field" id="f-goal"><label>Играем до <b><span id="v-goal"></span></b></label>
       <input type="range" id="r-goal" min="10" max="100" step="5"></div>
     <div class="field" id="f-count"><label>Карточек за ход <b><span id="v-count"></span></b></label>
       <input type="range" id="r-count" min="1" max="15" step="1"></div>
@@ -480,6 +533,18 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-ra
   <div class="hint desk"><span class="kbd">←</span> мимо &nbsp;<span class="kbd">→</span> есть</div>
 </section>
 
+<!-- ИЛИ / ИЛИ -->
+<section id="s-either" class="screen">
+  <div class="top"><button class="iconbtn" data-go="home">✕</button><h2>Или / Или</h2>
+    <span class="ecount" id="e-count"></span></div>
+  <div id="e-stage"></div>
+  <div class="enav">
+    <button class="btn" id="e-prev">← Назад</button>
+    <button class="btn primary" id="e-next">Дальше</button>
+  </div>
+  <div class="hint desk"><span class="kbd">←</span> первый &nbsp;<span class="kbd">→</span> второй &nbsp;<span class="kbd">пробел</span> дальше</div>
+</section>
+
 <!-- ИТОГ ХОДА -->
 <section id="s-review" class="screen">
   <div class="top"><button class="iconbtn" data-go="home">✕</button><h2>Итог хода</h2></div>
@@ -518,6 +583,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-ra
 <script src="data/words-more-4.js"></script>
 <script src="data/phrases.js"></script>
 <script src="data/photos.js"></script>
+<script src="data/either.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
